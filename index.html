@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LGED - Last Fantôme</title>
+
+<style>
+:root{
+  --bg:#0b0f1a;
+  --card:#141a2e;
+  --accent:#7c5cff;
+  --text:#eaeaff;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:Segoe UI, Arial, sans-serif;
+  background:linear-gradient(180deg,#05070f,#0b0f1a);
+  color:var(--text);
+}
+
+header{
+  background:url("https://images.unsplash.com/photo-1546444304-edd1ce6ffd1a") center/cover no-repeat;
+  padding:40px 20px;
+  text-align:center;
+}
+
+header h1{
+  margin:0;
+  font-size:clamp(26px,5vw,42px);
+  text-shadow:0 0 15px #000;
+}
+
+section{
+  background:var(--card);
+  margin:20px auto;
+  padding:20px;
+  border-radius:16px;
+  max-width:1100px;
+  box-shadow:0 0 30px rgba(0,0,0,.4);
+}
+
+label{display:block;margin-top:12px;color:var(--accent)}
+input,select{
+  width:100%;
+  padding:8px;
+  border-radius:8px;
+  border:none;
+  margin-top:6px;
+}
+
+button{
+  margin-top:16px;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:var(--accent);
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
+}
+
+button:hover{opacity:.9}
+
+.hidden{display:none}
+
+.results{
+  margin-top:16px;
+  padding:10px;
+  border-bottom:1px solid #2a2f55;
+}
+
+footer{
+  text-align:center;
+  padding:20px;
+  opacity:.6;
+}
+
+@media(max-width:700px){
+  section{margin:12px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>LGED – Base stratégique des héros</h1>
+  <p>Recherche rapide – version visiteurs</p>
+</header>
+
+<!-- 🔎 RECHERCHE VISITEURS -->
+<section>
+  <h2>🔍 Recherche Héros</h2>
+  <input id="searchInput" placeholder="Nom du héros">
+  <button onclick="searchHero()">Rechercher</button>
+  <div id="results"></div>
+</section>
+
+<!-- 🔐 CONNEXION ADMIN -->
+<section>
+  <h2>🔐 Connexion administration</h2>
+  <input type="password" id="adminPassword" placeholder="Mot de passe admin">
+  <button onclick="loginAdmin()">Connexion</button>
+</section>
+
+<!-- 🛠️ PANEL ADMIN -->
+<section id="adminPanel" class="hidden">
+  <h2>⚙️ Administration</h2>
+
+  <label>Nom du héros</label>
+  <input id="heroName">
+
+  <label>Étoiles</label>
+  <select id="heroStars">
+    <option>1</option><option>2</option><option>3</option>
+    <option>4</option><option>5</option>
+  </select>
+
+  <label>Niveau minimum</label>
+  <input id="heroLevel" type="number">
+
+  <button onclick="addHero()">Sauvegarder</button>
+</section>
+
+<footer>
+  © LGED – Last Fantôme
+</footer>
+
+<script>
+const ADMIN_PASSWORD = "lged2026";
+
+let heroes = JSON.parse(localStorage.getItem("heroes")) || [];
+
+function loginAdmin(){
+  const input = document.getElementById("adminPassword").value.trim();
+  if(input === ADMIN_PASSWORD){
+    alert("Connexion admin réussie ✅");
+    document.getElementById("adminPanel").classList.remove("hidden");
+  }else{
+    alert("Mot de passe incorrect ❌");
+  }
+}
+
+function addHero(){
+  const hero = {
+    name: heroName.value,
+    stars: heroStars.value,
+    level: heroLevel.value
+  };
+  heroes.push(hero);
+  localStorage.setItem("heroes", JSON.stringify(heroes));
+  alert("Héros sauvegardé ✅");
+}
+
+function searchHero(){
+  const q = searchInput.value.toLowerCase();
+  results.innerHTML = "";
+
+  heroes.filter(h => h.name.toLowerCase().includes(q))
+    .forEach(h=>{
+      results.innerHTML += `
+        <div class="results">
+          <strong>${h.name}</strong><br>
+          ⭐ ${h.stars} | Niveau min : ${h.level}
+        </div>
+      `;
+    });
+}
+</script>
+
+</body>
+</html>
