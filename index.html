@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LGED – Last Fantôme</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Segoe UI, Arial;
+  background:#0b0f1a;
+  color:#eaeaff;
+}
+header{
+  background:#141a2e;
+  padding:20px;
+  text-align:center;
+}
+section{
+  background:#141a2e;
+  margin:15px;
+  padding:15px;
+  border-radius:12px;
+}
+input, select{
+  width:100%;
+  padding:6px;
+  margin:4px 0;
+  border-radius:6px;
+  border:none;
+}
+button{
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:#7c5cff;
+  color:white;
+  cursor:pointer;
+  margin-top:10px;
+}
+.hidden{display:none}
+.hero-row{
+  display:grid;
+  grid-template-columns: 1fr 80px 80px;
+  gap:6px;
+  margin-bottom:6px;
+}
+.card{
+  border-bottom:1px solid #333;
+  padding:10px 0;
+}
+.result{
+  padding:8px;
+  border-bottom:1px solid #333;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>LGED – Last Fantôme 👻</h1>
+  <p>Recherche des héros – version publique</p>
+</header>
+
+<!-- 🔍 RECHERCHE VISITEURS -->
+<section>
+  <h2>🔍 Recherche</h2>
+
+  <label>Héros</label>
+  <select id="searchHero"></select>
+
+  <label>Étoiles minimum</label>
+  <select id="searchStars">
+    <option value="0">0</option>
+    <option>1</option><option>2</option><option>3</option>
+    <option>4</option><option>5</option>
+  </select>
+
+  <label>Niveau minimum</label>
+  <select id="searchLevel"></select>
+
+  <button onclick="search()">Rechercher</button>
+
+  <div id="searchResults"></div>
+</section>
+
+<!-- 🔐 CONNEXION ADMIN -->
+<section>
+  <h2>🔐 Connexion admin</h2>
+  <input type="password" id="pass" placeholder="Mot de passe admin">
+  <button onclick="login()">Connexion</button>
+</section>
+
+<!-- 🛠️ ADMIN -->
+<section id="admin" class="hidden">
+  <h2>➕ Fiche membre</h2>
+  <input id="pseudo" placeholder="Pseudo du membre">
+  <div id="heroesForm"></div>
+  <button onclick="saveMember()">💾 Sauvegarder</button>
+</section>
+
+<section id="membersSection" class="hidden">
+  <h2>📋 Membres</h2>
+  <div id="membersList"></div>
+</section>
+
+<script>
+const ADMIN_PASSWORD = "lged2026";
+
+const HEROES = [
+ "Kimberly","Murphy","Williams","Stetmann","Marshall","Adam","Mason",
+ "Violet","Scarlett","Monica","Richard","Gump","Loki","DVA","Lucius",
+ "Carlie","Schyler","Morrison","Sarah","Maxwell","Cage","Ambolt",
+ "Tesla","Fiona","McGregor","Swift","Venom","Elsa","Kane",
+ "Farhad","Bob","Charlie","Lori","Mary"
+];
+
+let members = JSON.parse(localStorage.getItem("members")) || [];
+let editIndex = null;
+
+/* INIT */
+HEROES.forEach(h=>{
+  searchHero.innerHTML += `<option>${h}</option>`;
+});
+for(let i=1;i<=300;i++){
+  searchLevel.innerHTML += `<option>${i}</option>`;
+}
+
+/* LOGIN */
+function login(){
+  if(pass.value === ADMIN_PASSWORD){
+    admin.classList.remove("hidden");
+    membersSection.classList.remove("hidden");
+    buildHeroesForm();
+    refreshMembers();
+  } else alert("Mot de passe incorrect");
+}
+
+/* ADMIN FORM */
+function buildHeroesForm(){
+  heroesForm.innerHTML="";
+  HEROES.forEach(h=>{
+    heroesForm.innerHTML += `
+      <div class="hero-row">
+        <select><option>${h}</option></select>
+        <select>
+          <option>1</option><option>2</option><option>3</option>
+          <option>4</option><option>5</option>
+        </select>
+        <input type="number" placeholder="Lvl">
+      </div>`;
+  });
+}
+
+function saveMember(){
+  const rows = document.querySelectorAll(".hero-row");
+  const heroes=[];
+  rows.forEach(r=>{
+    if(r.children[2].value){
+      heroes.push({
+        name:r.children[0].value,
+        stars:parseInt(r.children[1].value),
+        level:parseInt(r.children[2].value)
+      });
+    }
+  });
+
+  const data={pseudo:pseudo.value,heroes};
+  if(editIndex!==null){members[editIndex]=data;editIndex=null;}
+  else members.push(data);
+
+  localStorage.setItem("members",JSON.stringify(members));
+  pseudo.value="";
+  buildHeroesForm();
+  refreshMembers();
+}
+
+/* LIST */
+function refreshMembers(){
+  membersList.innerHTML="";
+  members.forEach((m,i)=>{
+    membersList.innerHTML+=`
+      <div class="card">
+        <strong>${m.pseudo}</strong><br>
+        ${m.heroes.map(h=>`${h.name} ⭐${h.stars} lvl ${h.level}`).join("<br>")}
+        <br><button onclick="editMember(${i})">Modifier</button>
+      </div>`;
+  });
+}
+
+function editMember(i){
+  editIndex=i;
+  pseudo.value=members[i].pseudo;
+  buildHeroesForm();
+  members[i].heroes.forEach(h=>{
+    document.querySelectorAll(".hero-row").forEach(r=>{
+      if(r.children[0].value===h.name){
+        r.children[1].value=h.stars;
+        r.children[2].value=h.level;
+      }
+    });
+  });
+}
+
+/* 🔍 SEARCH */
+function search(){
+  const hero=searchHero.value;
+  const stars=parseInt(searchStars.value);
+  const level=parseInt(searchLevel.value);
+  searchResults.innerHTML="";
+
+  members.forEach(m=>{
+    m.heroes.forEach(h=>{
+      if(h.name===hero && h.stars>=stars && h.level>=level){
+        searchResults.innerHTML+=`
+          <div class="result">
+            <strong>${m.pseudo}</strong><br>
+            ⭐ ${h.stars} – Niveau ${h.level}
+          </div>`;
+      }
+    });
+  });
+
+  if(!searchResults.innerHTML){
+    searchResults.innerHTML="<p>Aucun résultat</p>";
+  }
+}
+</script>
+
+</body>
+</html>
