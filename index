@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LGED – Last Fantôme</title>
+
+<!-- Styles existants -->
+<style>
+body {
+  margin:0;
+  font-family: Arial, sans-serif;
+  background:#0b0f1a;
+  color:#fff;
+}
+header {
+  background:#11182a;
+  padding:15px;
+  text-align:center;
+}
+h1 { color:#00e0ff; }
+
+.container {
+  max-width:1100px;
+  margin:auto;
+  padding:15px;
+}
+.card {
+  background:#161f36;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:20px;
+}
+input, select, button {
+  width:100%;
+  padding:6px;
+  margin:4px 0;
+  border-radius:5px;
+  border:none;
+}
+button {
+  background:#00e0ff;
+  font-weight:bold;
+}
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+th, td {
+  border-bottom:1px solid #2a3558;
+  padding:6px;
+  text-align:center;
+}
+.hidden { display:none; }
+.result {
+  background:#0e1528;
+  padding:8px;
+  border-radius:5px;
+  margin-top:5px;
+}
+</style>
+
+<!-- Firebase App -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+  // Remplace ces valeurs par celles de TON projet Firebase
+  const firebaseConfig = {
+    apiKey: "VOTRE_API_KEY",
+    authDomain: "VOTRE_PROJET.firebaseapp.com",
+    projectId: "VOTRE_PROJET_ID",
+    storageBucket: "VOTRE_PROJET.appspot.com",
+    messagingSenderId: "VOTRE_SENDER_ID",
+    appId: "VOTRE_APP_ID"
+  };
+
+  // Initialisation Firebase
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+</head>
+<body>
+
+<header>
+<h1>LGED – Last Fantôme</h1>
+<p>Gestion des héros – Équipe LGED</p>
+</header>
+
+<div class="container">
+
+<!-- 🔍 RECHERCHE PUBLIQUE -->
+<div class="card">
+<h2>🔍 Recherche</h2>
+
+<select id="searchHero"></select>
+<select id="searchStars">
+<option value="0">0 ⭐</option><option value="1">1 ⭐</option>
+<option value="2">2 ⭐</option><option value="3">3 ⭐</option>
+<option value="4">4 ⭐</option><option value="5">5 ⭐</option>
+</select>
+
+<select id="searchLevel"></select>
+
+<button onclick="search()">Rechercher</button>
+<div id="results"></div>
+</div>
+
+<!-- 🔐 ADMIN -->
+<div class="card">
+<h2>🔐 Administrateur</h2>
+<input type="password" id="adminPass" placeholder="Mot de passe admin">
+<button onclick="login()">Connexion</button>
+
+<div id="adminPanel" class="hidden">
+
+<h3>🧾 Fiche membre</h3>
+<input id="pseudo" placeholder="Pseudo du membre">
+
+<table id="heroesTable"></table>
+
+<button onclick="saveMember()">💾 Sauvegarder / Modifier</button>
+
+<h3>📋 Membres existants</h3>
+<select id="memberSelect" onchange="loadMember()"></select>
+
+</div>
+</div>
+
+</div>
+
+<script>
+// ADMIN
+const ADMIN_PASSWORD = "admin123";
+const heroes = [
+"Kimberly","Murphy","Williams","Stetmann","Marshall","Adam","Mason",
+"Violet","Scarlett","Monica","Richard","Gump","Loki","DVA","Lucius",
+"Carlie","Schyler","Morrison","Sarah","Maxwell","Cage","Ambolt",
+"Tesla","Fiona","McGregor","Swift","Venom","Elsa","Kane",
+"Farhad","Bob","Charlie","Lori","Mary"
+];
+
+// Initialisation
+function init() {
+  heroes.forEach(h=>{
+    searchHero.innerHTML+=`<option>${h}</option>`;
+  });
+  for(let i=1;i<=300;i++){
+    searchLevel.innerHTML+=`<option>${i}</option>`;
+  }
+  buildHeroesTable();
+  loadMembersList();
+}
+init();
+
+// LOGIN
+function login(){
+  if(adminPass.value===ADMIN_PASSWORD){
+    adminPanel.classList.remove("hidden");
+  } else alert("Mot de passe incorrect");
+}
+
+// TABLEAU HEROES
+function buildHeroesTable(){
+  let html="<tr><th>Héros</th><th>⭐</th><th>Niveau</th></tr>";
+  heroes.forEach(h=>{
+    html+=`
+    <tr>
+      <td>${h}</td>
+      <td><select id="star_${h}">
+        <option>0</option><option>1</option><option>2</option>
+        <option>3</option><option>4</option><option>5</option>
+      </select></td>
+      <td><select id="lvl_${h}">
+        ${Array.from({length:301},(_,i)=>`<option>${i}</option>`).join("")}
+      </select></td>
+    </tr>`;
+  });
+  heroesTable.innerHTML=html;
+}
+
+// SAUVEGARDE JOUEUR
+function saveMember(){
+  const pseudoVal=pseudo.value.trim();
+  if(!pseudoVal){ alert("Pseudo manquant"); return; }
+
+  // Sauvegarde dans Firebase
+  const playerRef = db.collection("players").doc(pseudoVal);
+  let heroData = {};
+  heroes.forEach(h=>{
+    heroData[h] = {
+      stars: parseInt(document.getElementById("star_"+h).value),
+      level: parseInt(document.getElementById("lvl_"+h).value)
+    };
+  });
+  playerRef.set({pseudo: pseudoVal, heroes: heroData})
+  .then(()=>{ alert("Membre sauvegardé dans Firestore"); loadMembersList(); })
+  .catch(err=>{ console.error(err); alert("Erreur sauvegarde"); });
+}
+
+// CHARGER MEMBRE
+function loadMembersList(){
+  memberSelect.innerHTML="<option value=''>-- Choisir --</option>";
+  db.collection("players").get().then(snapshot=>{
+    snapshot.forEach(doc=>{
+      memberSelect.innerHTML+=`<option>${doc.id}</option>`;
+    });
+  });
+}
+
+function loadMember(){
+  let name=memberSelect.value;
+  if(!name) return;
+  db.collection("players").doc(name).get().then(doc=>{
+    if(doc.exists){
+      pseudo.value = doc.data().pseudo;
+      heroes.forEach(h=>{
+        document.getElementById("star_"+h).value = doc.data().heroes[h].stars;
+        document.getElementById("lvl_"+h).value = doc.data().heroes[h].level;
+      });
+    }
+  });
+}
+
+// RECHERCHE
+function search(){
+  results.innerHTML="";
+  let hero=searchHero.value;
+  let stars=parseInt(searchStars.value);
+  let lvl=parseInt(searchLevel.value);
+  db.collection("players").get().then(snapshot=>{
+    let found=false;
+    snapshot.forEach(doc=>{
+      let h=doc.data().heroes[hero];
+      if(h && h.stars>=stars && h.level>=lvl){
+        results.innerHTML+=`<div class="result">${doc.data().pseudo}</div>`;
+        found=true;
+      }
+    });
+    if(!found) results.innerHTML="<p>Aucun résultat</p>";
+  });
+}
+</script>
+
+</body>
+</html>
